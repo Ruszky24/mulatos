@@ -1,77 +1,23 @@
-<!DOCTYPE html>
-<html lang="hu">
-<head>
-    <meta charset="UTF-8">
-    <title>Mulatós Hitster</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; background: #121212; color: white; padding: 20px; }
-        .card { border: 2px solid #e91e63; padding: 15px; margin: 10px; display: inline-block; border-radius: 8px; background: #1e1e1e; }
-        .timeline { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
-        button { background: #e91e63; color: white; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 5px; }
-        button:hover { background: #c2185b; }
-    </style>
-</head>
-<body>
-
-    <h1>🎤 Mulatós Hitster</h1>
-    <p>Találd ki, mikor jelent meg a dal!</p>
-
-    <!-- Zene lejátszó konténer -->
-    <div id="player-container">
-        <button onclick="playCurrentSong()">🎵 Zene Lejátszása</button>
-    </div>
-
-    <h3>Idővonal:</h3>
-    <div class="timeline" id="timeline"></div>
-
-    <script>
-        // Dalok adatbázisa
-        const songs = [
-            { id: 1, eloado: "L.L. Junior", cim: "Raggamuffin 2", ev: 2002, url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
-            { id: 2, eloado: "Rostás Szabika", cim: "Gyere táncolj", ev: 2012, url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
-            { id: 3, eloado: "Bittó Duó", cim: "Mulatós sláger", ev: 2020, url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" }
-        ];
-
-        let timeline = [];
-        let currentSong = null;
-        let audio = new Audio();
-
-        function initGame() {
-            // Első kártya lerakása automatikusan
-            const firstSong = songs.pop();
-            timeline.push(firstSong);
-            renderTimeline();
-            nextTurn();
-        }
-
-        function nextTurn() {
-            if (songs.length === 0) {
-                alert("Gratulálok, elfogyott a pakli!");
-                return;
-            }
-            // Új dal húzása
-            currentSong = songs.pop();
-            audio.src = currentSong.url;
-        }
-
-        function playCurrentSong() {
-            audio.play();
-        }
-
-        function renderTimeline() {
-            const container = document.getElementById("timeline");
-            container.innerHTML = "";
-
-            timeline.forEach((song, index) => {
-                const card = document.createElement("div");
-                card.className = "card";
-                card.innerHTML = `<strong>${song.eloado}</strong><br>${song.cim}<br><em>${song.ev}</em>`;
-                container.appendChild(card);
-            });
-        }
-
-        // Indítás
-        initGame();
-    </script>
-</body>
-</html>
+[
+  {
+    "id": 1,
+    "eloado": "L.L. Junior",
+    "cim": "Raggamuffin 2",
+    "ev": 2002,
+    "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+  },
+  {
+    "id": 2,
+    "eloado": "Rostás Szabika",
+    "cim": "Gyere táncolj",
+    "ev": 2012,
+    "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+  },
+  {
+    "id": 3,
+    "eloado": "Bittó Duó",
+    "cim": "Mulatós sláger",
+    "ev": 2020,
+    "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+  }
+]
