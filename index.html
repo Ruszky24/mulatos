@@ -5,13 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mulatós Hitster</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #121212; color: white; padding: 20px; }
+        body { font-family: sans-serif; text-align: center; background: #121212; color: white; padding: 15px; margin: 0; }
         .card { border: 2px solid #e91e63; padding: 15px; margin: 10px; display: inline-block; border-radius: 8px; background: #1e1e1e; }
         .timeline { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
-        button { background: #e91e63; color: white; border: none; padding: 15px 25px; font-size: 18px; cursor: pointer; border-radius: 8px; margin: 8px; font-weight: bold; }
-        #status { color: #ffeb3b; font-size: 14px; margin-bottom: 15px; }
-        /* A YouTube iframe minimális méretű marad, de látható, mert a mobilok csak így engedik futtatni */
-        #youtube-container { width: 100%; height: 60px; margin-top: 15px; overflow: hidden; opacity: 0.1; }
+        button { background: #e91e63; color: white; border: none; padding: 15px 20px; font-size: 16px; cursor: pointer; border-radius: 8px; margin: 5px; font-weight: bold; }
+        #status { color: #ffeb3b; font-size: 14px; margin: 10px 0; }
+        
+        /* A YouTube ablak látható marad, de kicsi, hogy a böngésző ne blokkolja mobilon */
+        .player-wrapper {
+            margin: 15px auto;
+            width: 280px;
+            height: 160px;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #333;
+        }
     </style>
 </head>
 <body>
@@ -20,13 +29,13 @@
     <div id="status">⏳ Töltés...</div>
 
     <div>
-        <button id="playBtn" onclick="playCurrentSong()">🎵 Zene Indítása</button>
-        <button id="pauseBtn" onclick="pauseCurrentSong()">⏸️ Szünet</button>
-        <button id="nextBtn" onclick="nextTurn()">⏭️ Következő kártya</button>
+        <button onclick="playCurrentSong()">🎵 Zene Indítása</button>
+        <button onclick="pauseCurrentSong()">⏸️ Szünet</button>
+        <button onclick="nextTurn()">⏭️ Következő kártya</button>
     </div>
 
-    <!-- Rejtett lejátszó ablak a mobil kompatibilitáshoz -->
-    <div id="youtube-container">
+    <!-- Ez a látható YouTube ablak kell a mobiloknak! -->
+    <div class="player-wrapper">
         <div id="player"></div>
     </div>
 
@@ -42,8 +51,8 @@
         let player = null;
         let isPlayerReady = false;
 
-        // FŐ TRÜKK: Kiszedi a YouTube ID-t BÁRMILYEN YouTube linkből!
         function extractYouTubeId(url) {
+            if (!url) return null;
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
             const match = url.match(regExp);
             return (match && match[2].length === 11) ? match[2] : null;
@@ -51,12 +60,12 @@
 
         function onYouTubeIframeAPIReady() {
             player = new YT.Player('player', {
-                height: '60',
-                width: '200',
+                height: '160',
+                width: '280',
                 events: {
                     'onReady': () => {
                         isPlayerReady = true;
-                        document.getElementById('status').innerText = "✅ Lejátszó kész!";
+                        document.getElementById('status').innerText = "✅ Lejátszó kész! Nyomj a Zene Indítására!";
                     }
                 }
             });
@@ -76,7 +85,7 @@
                 shuffle(songs);
                 initGame();
             } catch (error) {
-                document.getElementById('status').innerText = "❌ Hiba a JSON betöltésekor!";
+                document.getElementById('status').innerText = "❌ Hiba a songs.json betöltésekor!";
             }
         }
 
@@ -94,15 +103,15 @@
                 return;
             }
             currentSong = songs.pop();
-            document.getElementById('status').innerText = "🎶 Új dal betöltve. Nyomj a Zene Indítására!";
+            document.getElementById('status').innerText = "🎶 Új dal készen áll! Nyomj a Zene Indítására.";
         }
 
         function playCurrentSong() {
             if (!currentSong) return;
-            
             const videoId = extractYouTubeId(currentSong.url);
+            
             if (!videoId) {
-                alert("Hibás YouTube link a JSON-ben!");
+                alert("Hibás YouTube link a JSON fájlban!");
                 return;
             }
 
@@ -111,7 +120,7 @@
                 player.playVideo();
                 document.getElementById('status').innerText = "▶️ Zene szól...";
             } else {
-                alert("A lejátszó még töltődik, próbáld újra egy pillanat múlva!");
+                alert("A lejátszó még nem áll készen, várj 2 másodpercet!");
             }
         }
 
