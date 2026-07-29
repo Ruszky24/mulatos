@@ -4,13 +4,6 @@
     "title": "Álmodtam egy világot magamnak",
     "artist": "Döndi Duó",
     "src": "music/zene1.mp3",
-    "refrenStart": 45
-  },
-  {
-    "id": 2,
-    "title": "Másik Zene",
-    "artist": "Másik Előadó",
-    "src": "music/zene2.mp3",
-    "refrenStart": 60
+    "year": 2021
   }
 ]
