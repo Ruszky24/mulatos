@@ -206,6 +206,7 @@
     }
 
     // Következő zene indítása
+// Következő zene indítása (30 mp hallgatás, 0 és a vége-30 mp között bármhonnan)
     playBtn.addEventListener('click', () => {
         if (songsData.length === 0) return alert("Nincs több elérhető zene a JSON-ben!");
         if (stopTimeout) clearTimeout(stopTimeout);
@@ -216,15 +217,28 @@
         audio.src = currentSong.src;
 
         audio.onloadedmetadata = () => {
-            const startTime = getRandomNumber(45, 70);
-            const duration = getRandomNumber(15, 25);
+            const playDuration = 30; // Pontosan fél perc (30 mp)
+            const totalDuration = audio.duration; // A zene teljes hossza mp-ben
+
+            let startTime = 0;
+
+            // Ha a zene hosszabb mint 30 másodperc, random helyről indítjuk
+            if (totalDuration > playDuration) {
+                // Megkeressük a legkésőbbi indítási pontot, ahonnan még elfér a 30 mp
+                const maxStartTime = Math.floor(totalDuration - playDuration);
+                startTime = getRandomNumber(0, maxStartTime);
+            } else {
+                // Ha a zene rövidebb lenne 30 mp-nél, az elejétől indítjuk
+                startTime = 0;
+            }
 
             audio.currentTime = startTime;
             audio.play().catch(e => console.error("Lejátszási hiba:", e));
 
+            // Pontosan 30 másodperc (30 000 ms) múlva leállítjuk
             stopTimeout = setTimeout(() => {
                 audio.pause();
-            }, duration * 1000);
+            }, playDuration * 1000);
         };
     });
 
