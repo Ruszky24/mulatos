@@ -12,5 +12,12 @@
     "artist": "Rostás Szabika",
     "src": "music/zene2.mp3",
     "year": 2026
+  },
+  {
+    "id": 3,
+    "title": "Hajnalba megyek megint haza",
+    "artist": "Bittó Duó",
+    "src": "music/zene3.mp3",
+    "year": 2019
   }
 ]
