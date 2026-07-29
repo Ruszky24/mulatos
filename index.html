@@ -5,35 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎤 Mulatós Hitster</title>
     <style>
-        :root {
-            --primary: #e91e63;
-            --bg: #121212;
-            --card-bg: #1e1e1e;
-        }
-
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
+            background-color: #121212;
             color: white;
             text-align: center;
             margin: 0;
             padding: 20px;
         }
 
-        h1 { color: var(--primary); font-size: 2.5rem; margin-bottom: 5px; }
+        h1 { color: #e91e63; margin-bottom: 5px; }
         .score-board { font-size: 1.2rem; margin-bottom: 20px; color: #ffeb3b; }
 
         .controls {
-            background: #252525;
+            background: #1e1e1e;
             padding: 20px;
             border-radius: 12px;
             max-width: 500px;
-            margin: 0 auto 30px auto;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            margin: 0 auto 20px auto;
+            border: 1px solid #333;
         }
 
         button {
-            background: var(--primary);
+            background: #e91e63;
             color: white;
             border: none;
             padding: 12px 20px;
@@ -41,58 +35,67 @@
             font-weight: bold;
             border-radius: 8px;
             cursor: pointer;
-            transition: 0.2s;
             margin: 5px;
         }
 
-        button:hover { background: #c2185b; transform: scale(1.05); }
-        button:disabled { background: #555; cursor: not-allowed; transform: none; }
-
-        .guess-btn { background: #2196F3; }
+        button:hover { background: #c2185b; }
+        
+        .guess-btn {
+            background: #2196F3;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
         .guess-btn:hover { background: #1976D2; }
 
         .timeline {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
             flex-wrap: wrap;
             margin-top: 20px;
         }
 
         .card {
-            border: 2px solid var(--primary);
+            border: 2px solid #e91e63;
             padding: 15px;
             border-radius: 10px;
-            background: var(--card-bg);
-            min-width: 140px;
-            box-shadow: 0 4px 10px rgba(233, 30, 99, 0.3);
+            background: #1e1e1e;
+            min-width: 130px;
         }
 
-        .card.active-guess { border-color: #ffeb3b; background: #332b00; }
-        .card-year { font-size: 1.4rem; font-weight: bold; color: var(--primary); margin-top: 5px; }
+        .card-year { font-size: 1.4rem; font-weight: bold; color: #e91e63; margin-top: 5px; }
 
-        #youtube-player { display: none; }
-        #status-msg { margin-top: 10px; font-style: italic; color: #bbb; }
+        /* A TRÜKK: A YouTube lejátszó 1x1 pixeles, így teljesen LÁTHATATLAN, de a böngésző játssza a hangot! */
+        #player-wrapper {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
 
     <h1>🎤 Mulatós Hitster</h1>
-    <div class="score-board">Pontszám: <span id="score">0</span> pont</div>
+    <div class="score-board">Pontszám: <span id="score">0</span></div>
 
     <div class="controls">
-        <div id="status-msg">⏳ Töltés...</div>
+        <div id="status">⏳ Töltés...</div>
         <br>
-        <button id="playBtn" onclick="playSong()" disabled>🎵 Zene Lejátszása</button>
-        <button id="pauseBtn" onclick="pauseSong()" disabled>⏸️ Szünet</button>
+        <button onclick="playSong()">🎵 Zene Lejátszása</button>
+        <button onclick="pauseSong()">⏸️ Szünet</button>
     </div>
 
     <h2>Idővonal</h2>
     <div class="timeline" id="timeline"></div>
 
-    <!-- Rejtett YouTube Lejátszó -->
-    <div id="youtube-player"></div>
+    <!-- Rejtett YouTube konténer -->
+    <div id="player-wrapper">
+        <div id="player"></div>
+    </div>
 
     <script src="https://www.youtube.com/iframe_api"></script>
 
@@ -104,7 +107,6 @@
         let player = null;
         let isPlayerReady = false;
 
-        // YouTube ID kiszedő függvény
         function extractYouTubeId(url) {
             if (!url) return null;
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -113,13 +115,13 @@
         }
 
         function onYouTubeIframeAPIReady() {
-            player = new YT.Player('youtube-player', {
-                height: '0',
-                width: '0',
+            player = new YT.Player('player', {
+                height: '200',
+                width: '200',
                 events: {
                     'onReady': () => {
                         isPlayerReady = true;
-                        document.getElementById('status-msg').innerText = "✅ Készen áll! Indítsd a zenét.";
+                        document.getElementById('status').innerText = "✅ Indítsd el a zenét és tippelj!";
                     }
                 }
             });
@@ -134,36 +136,31 @@
 
         async function loadSongs() {
             try {
+                // A timestamp kényszeríti a friss JSON letöltést
                 const response = await fetch('./songs.json?v=' + new Date().getTime());
                 songs = await response.json();
                 shuffle(songs);
                 initGame();
             } catch (error) {
-                document.getElementById('status-msg').innerText = "❌ Hiba a songs.json betöltésekor!";
+                document.getElementById('status').innerText = "❌ Hiba a songs.json betöltésekor!";
             }
         }
 
         function initGame() {
             if (songs.length === 0) return;
-            // Első kártya letétele fixnek az idővonalra
             const firstSong = songs.pop();
             timeline.push(firstSong);
-            
             nextTurn();
         }
 
         function nextTurn() {
             if (songs.length === 0) {
-                alert(`Játék vége! Végső pontszámod: ${score}`);
+                alert(`Játék vége! Végleges pontod: ${score}`);
                 return;
             }
-
             currentSong = songs.pop();
             renderTimeline();
-
-            document.getElementById('playBtn').disabled = false;
-            document.getElementById('pauseBtn').disabled = false;
-            document.getElementById('status-msg').innerText = "🎶 Új dal betöltve. Hallgasd meg és tippeld meg a helyét!";
+            document.getElementById('status').innerText = "🎶 Új zene készen áll! Indítsd el a hangot!";
         }
 
         function playSong() {
@@ -172,41 +169,37 @@
             if (videoId) {
                 player.loadVideoById(videoId);
                 player.playVideo();
-                document.getElementById('status-msg').innerText = "▶️ Zene szól...";
+                document.getElementById('status').innerText = "▶️ Szól a zene... Hova rakod az idővonalon?";
             } else {
-                alert("Hibás YouTube link a JSON-ben!");
+                alert("Hibás link van a songs.json-ben!");
             }
         }
 
         function pauseSong() {
             if (player && isPlayerReady) {
                 player.pauseVideo();
-                document.getElementById('status-msg').innerText = "⏸️ Szüneteltetve";
+                document.getElementById('status').innerText = "⏸️ Szüneteltetve";
             }
         }
 
-        // Tippelési logika: ellenőrzi, jó helyre kerül-e a kártya az idővonalon
         function makeGuess(insertIndex) {
             pauseSong();
-
             let isCorrect = true;
 
-            // Ellenőrizzük a bal oldali szomszédot
             if (insertIndex > 0 && timeline[insertIndex - 1].ev > currentSong.ev) {
                 isCorrect = false;
             }
-            // Ellenőrizzük a jobb oldali szomszédot
             if (insertIndex < timeline.length && timeline[insertIndex].ev < currentSong.ev) {
                 isCorrect = false;
             }
 
             if (isCorrect) {
-                alert(`🎯 Helyes! A dal: ${currentSong.eloado} - ${currentSong.cim} (${currentSong.ev})`);
+                alert(`🎯 HELYES! A dal: ${currentSong.eloado} - ${currentSong.cim} (${currentSong.ev})`);
                 score++;
                 document.getElementById('score').innerText = score;
                 timeline.splice(insertIndex, 0, currentSong);
             } else {
-                alert(`❌ Rossz tipp! A dal valójában ekkor jelent meg: ${currentSong.ev} (${currentSong.eloado} - ${currentSong.cim})`);
+                alert(`❌ ROSSZ TIPP! A dal megjelenése: ${currentSong.ev} (${currentSong.eloado} - ${currentSong.cim})`);
             }
 
             nextTurn();
@@ -216,20 +209,13 @@
             const container = document.getElementById("timeline");
             container.innerHTML = "";
 
-            // Gomb az első helyre tippeléshez
             container.appendChild(createGuessButton(0));
 
             timeline.forEach((song, index) => {
                 const card = document.createElement("div");
                 card.className = "card";
-                card.innerHTML = `
-                    <strong>${song.eloado}</strong><br>
-                    <small>${song.cim}</small>
-                    <div class="card-year">${song.ev}</div>
-                `;
+                card.innerHTML = `<strong>${song.eloado}</strong><br><small>${song.cim}</small><div class="card-year">${song.ev}</div>`;
                 container.appendChild(card);
-
-                // Gomb a kártyák közötti/utáni tippeléshez
                 container.appendChild(createGuessButton(index + 1));
             });
         }
