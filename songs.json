@@ -5,5 +5,12 @@
     "artist": "Döndi Duó",
     "src": "music/zene1.mp3",
     "year": 2021
+  },
+    {
+    "id": 2,
+    "title": "Szentmártoni lányok",
+    "artist": "Rostás Szabika",
+    "src": "music/zene2.mp3",
+    "year": 2026
   }
 ]
