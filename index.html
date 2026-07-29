@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zene Lejátszó</title>
+    <title>Random Zene Szegmens Lejátszó</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -18,9 +18,10 @@
         .player-card {
             background: #1e1e1e;
             padding: 30px;
-            border-radius: 12px;
+            border-radius: 16px;
             text-align: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            width: 320px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
         }
         button {
             background-color: #1db954;
@@ -28,26 +29,53 @@
             border: none;
             padding: 12px 24px;
             font-size: 16px;
+            font-weight: bold;
             border-radius: 25px;
             cursor: pointer;
-            margin-top: 15px;
-            transition: 0.2s;
+            margin-top: 20px;
+            transition: transform 0.1s, background-color 0.2s;
         }
         button:hover {
             background-color: #1ed760;
+            transform: scale(1.05);
+        }
+        /* Idővonal stílusa */
+        .progress-container {
+            width: 100%;
+            background-color: #404040;
+            height: 8px;
+            border-radius: 4px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #1db954;
+            transition: width 0.1s linear;
+        }
+        .time-info {
+            font-size: 12px;
+            color: #b3b3b3;
+            margin-top: 8px;
         }
     </style>
 </head>
 <body>
 
 <div class="player-card">
-    <h2 id="song-title">Kattints az indításhoz!</h2>
+    <h2 id="song-title">Nyomd meg a gombot!</h2>
     <p id="song-artist">-</p>
     
-    <!-- A rejtett lejátszó elem -->
     <audio id="audio-player"></audio>
     
-    <button id="play-btn">Random Refrén Lejátszása</button>
+    <!-- Idővonal elemei -->
+    <div class="progress-container">
+        <div id="progress-bar" class="progress-bar"></div>
+    </div>
+    <div id="time-info" class="time-info">00:00 / 00:00</div>
+
+    <button id="play-btn">Random Részlet Lejátszása</button>
 </div>
 
 <script>
@@ -55,49 +83,64 @@
     const titleEl = document.getElementById('song-title');
     const artistEl = document.getElementById('song-artist');
     const playBtn = document.getElementById('play-btn');
+    const progressBar = document.getElementById('progress-bar');
+    const timeInfo = document.getElementById('time-info');
 
     let songsData = [];
+    let stopTimeout = null; // A leállításhoz szükséges időzítő
 
-    // 1. JSON fájl betöltése (módosítsd a fájlnevet, ha a tied nem 'songs.json')
+    // 1. JSON betöltése
     fetch('songs.json')
-        .then(response => {
-            if (!response.ok) throw new Error("Nem sikerült betölteni a JSON fájlt!");
-            return response.json();
-        })
-        .then(data => {
-            songsData = data;
-            console.log("Zenék sikeresen betöltve:", songsData);
-        })
-        .catch(err => {
-            titleEl.textContent = "Hiba a JSON betöltésekor!";
-            console.error(err);
-        });
+        .then(res => res.json())
+        .then(data => { songsData = data; })
+        .catch(err => console.error("JSON Hiba:", err));
 
-    // 2. Random zene és refrén indítása gombnyomásra
+    // Segédfüggvény: Random szám két érték között
+    function getRandomNumber(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
     playBtn.addEventListener('click', () => {
-        if (songsData.length === 0) {
-            alert("Még nem töltődtek be a zenék a JSON-ből!");
-            return;
-        }
+        if (songsData.length === 0) return alert("A zenék még töltődnek!");
 
-        // Random zene kiválasztása a tömbből
-        const randomIndex = Math.floor(Math.random() * songsData.length);
-        const selectedSong = songsData[randomIndex];
+        // Előző időzítő törlése, ha még futna
+        if (stopTimeout) clearTimeout(stopTimeout);
 
-        // Adatok frissítése a kijelzőn
-        titleEl.textContent = selectedSong.title || "Ismeretlen szám";
-        artistEl.textContent = selectedSong.artist || "Ismeretlen előadó";
+        // Random zene kiválasztása
+        const song = songsData[getRandomNumber(0, songsData.length - 1)];
+        titleEl.textContent = song.title || "Ismeretlen szám";
+        artistEl.textContent = song.artist || "Ismeretlen előadó";
 
-        // Forrás beállítása a local music mappából
-        audio.src = selectedSong.src;
+        audio.src = song.src;
 
-        // Amikor a zene adatai betöltődtek, ugrik a refrénre és elindul
         audio.onloadedmetadata = () => {
-            // Refrén kezdete másodpercben (ha nincs megadva a JSON-ben, 0-ról indul)
-            const refrenStart = selectedSong.refrenStart || 0; 
+            // 1. Random kezdőpont 45 és 70 mp (1:10) között
+            const startTime = getRandomNumber(45, 70);
             
-            audio.currentTime = refrenStart;
-            audio.play().catch(e => console.error("Lejátszási hiba:", e));
+            // 2. Random időtartam 15 és 25 mp között
+            const duration = getRandomNumber(15, 25);
+            const endTime = startTime + duration;
+
+            // Ugrás a kezdőponthoz
+            audio.currentTime = startTime;
+            audio.play();
+
+            // 3. Automatikus leállítás a kiválasztott időtartam után
+            stopTimeout = setTimeout(() => {
+                audio.pause();
+                progressBar.style.width = '100%';
+            }, duration * 1000);
+
+            // 4. Idővonal frissítése folyamatosan
+            audio.ontimeupdate = () => {
+                if (audio.currentTime >= startTime && audio.currentTime <= endTime) {
+                    const elapsed = audio.currentTime - startTime;
+                    const progressPercent = (elapsed / duration) * 100;
+                    
+                    progressBar.style.width = `${progressPercent}%`;
+                    timeInfo.textContent = `${Math.floor(elapsed)}s / ${duration}s`;
+                }
+            };
         };
     });
 </script>
