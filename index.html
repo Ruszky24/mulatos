@@ -111,18 +111,22 @@
 
     let songsData = [];
     let currentSong = null;
-    let placedCards = []; // Lerakott kártyák a meccs során
+    let placedCards = [];
     let stopTimeout = null;
 
+    // JSON betöltése
     fetch('songs.json')
         .then(res => res.json())
-        .then(data => { songsData = data; });
+        .then(data => { 
+            songsData = data; 
+            console.log("Betöltött adatok:", songsData);
+        })
+        .catch(err => console.error("JSON hiba:", err));
 
     function getRandomNumber(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
-    // 1. Random zenei részlet indítása (45-70mp között, 15-25mp hosszan)
     playBtn.addEventListener('click', () => {
         if (songsData.length === 0) return alert("A zenék még töltődnek!");
         if (stopTimeout) clearTimeout(stopTimeout);
@@ -137,7 +141,7 @@
             const duration = getRandomNumber(15, 25);
 
             audio.currentTime = startTime;
-            audio.play();
+            audio.play().catch(e => console.error("Lejátszási hiba (lehet hiányzik az mp3):", e));
 
             stopTimeout = setTimeout(() => {
                 audio.pause();
@@ -145,7 +149,6 @@
         };
     });
 
-    // 2. Tipp ellenőrzése és elhelyezése az idővonalon
     submitBtn.addEventListener('click', () => {
         if (!currentSong) return alert("Először indíts el egy zenét!");
         
@@ -154,29 +157,26 @@
 
         audio.pause();
 
-        // Ellenőrzés: Eltalálta a pontos évet? (Vagy ha csak a sorrendet nézzük)
-        if (guessedYear === currentSong.year) {
+        // Biztosítjuk, hogy számmá alakítjuk a JSON-ben lévő évet is
+        const songYear = parseInt(currentSong.year);
+
+        if (guessedYear === songYear) {
             resultEl.style.color = "#1db954";
-            resultEl.textContent = `🎯 TELITALÁLAT! (${currentSong.artist} - ${currentSong.title}, ${currentSong.year})`;
+            resultEl.textContent = `🎯 TELITALÁLAT! (${currentSong.artist} - ${currentSong.title}, ${songYear})`;
         } else {
             resultEl.style.color = "#ff4d4d";
-            resultEl.textContent = `❌ Sajnálom! A helyes év: ${currentSong.year} (${currentSong.artist} - ${currentSong.title})`;
+            resultEl.textContent = `❌ Sajnálom! A helyes év: ${songYear} (${currentSong.artist} - ${currentSong.title})`;
         }
 
-        // Hozzáadás az idővonalhoz
         placedCards.push({
-            year: currentSong.year,
+            year: songYear,
             title: currentSong.title,
             artist: currentSong.artist
         });
 
-        // Idővonal sorbarendezése évszám szerint
         placedCards.sort((a, b) => a.year - b.year);
-
-        // Idővonal kirajzolása a képernyőre
         renderTimeline();
         
-        // Alaphelyzetbe állítás
         currentSong = null;
         yearInput.value = "";
     });
@@ -187,7 +187,7 @@
             const cardDiv = document.createElement('div');
             cardDiv.className = 'card';
             cardDiv.innerHTML = `
-                <div class="year">${card.year}</div>
+                <div class="year">${card.year ? card.year : '?' }</div>
                 <div class="details">${card.artist}<br><b>${card.title}</b></div>
             `;
             timelineEl.appendChild(cardDiv);
