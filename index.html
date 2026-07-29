@@ -3,146 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Random Zene Szegmens Lejátszó</title>
+    <title>Hitster Zenei Idővonal Játék</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             background-color: #121212;
             color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
             margin: 0;
         }
         .player-card {
             background: #1e1e1e;
-            padding: 30px;
+            padding: 25px;
             border-radius: 16px;
             text-align: center;
-            width: 320px;
+            width: 350px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            margin-bottom: 30px;
         }
         button {
             background-color: #1db954;
             color: white;
             border: none;
-            padding: 12px 24px;
-            font-size: 16px;
+            padding: 12px 20px;
+            font-size: 15px;
             font-weight: bold;
             border-radius: 25px;
             cursor: pointer;
+            margin: 10px 5px;
+            transition: 0.2s;
+        }
+        button:hover { background-color: #1ed760; }
+        
+        .timeline-container {
+            width: 90%;
+            max-width: 800px;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+        }
+        .guess-box {
+            margin: 20px 0;
+        }
+        input[type="number"] {
+            padding: 10px;
+            font-size: 18px;
+            width: 100px;
+            border-radius: 8px;
+            border: none;
+            text-align: center;
+        }
+        .timeline-list {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
             margin-top: 20px;
-            transition: transform 0.1s, background-color 0.2s;
         }
-        button:hover {
-            background-color: #1ed760;
-            transform: scale(1.05);
+        .card {
+            background: #282828;
+            border: 2px solid #1db954;
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 120px;
+            text-align: center;
         }
-        /* Idővonal stílusa */
-        .progress-container {
-            width: 100%;
-            background-color: #404040;
-            height: 8px;
-            border-radius: 4px;
-            margin-top: 20px;
-            overflow: hidden;
-        }
-        .progress-bar {
-            width: 0%;
-            height: 100%;
-            background-color: #1db954;
-            transition: width 0.1s linear;
-        }
-        .time-info {
-            font-size: 12px;
-            color: #b3b3b3;
-            margin-top: 8px;
-        }
+        .card .year { font-size: 22px; font-weight: bold; color: #1db954; }
+        .card .details { font-size: 12px; color: #b3b3b3; margin-top: 5px; }
+        .result-msg { font-weight: bold; font-size: 18px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="player-card">
-    <h2 id="song-title">Nyomd meg a gombot!</h2>
-    <p id="song-artist">-</p>
+    <h2>Hitster Játék</h2>
+    <p>Hallgasd meg a részletet és találd ki a kiadási évet!</p>
     
     <audio id="audio-player"></audio>
-    
-    <!-- Idővonal elemei -->
-    <div class="progress-container">
-        <div id="progress-bar" class="progress-bar"></div>
-    </div>
-    <div id="time-info" class="time-info">00:00 / 00:00</div>
+    <button id="play-btn">🎵 Random Részlet Lejátszása</button>
+</div>
 
-    <button id="play-btn">Random Részlet Lejátszása</button>
+<div class="timeline-container">
+    <h3>Tippeld meg a kiadási évet!</h3>
+    
+    <div class="guess-box">
+        <input type="number" id="year-input" placeholder="pl. 2021" min="1900" max="2026">
+        <button id="submit-btn">Elhelyezés az idővonalon</button>
+    </div>
+
+    <div id="result" class="result-msg"></div>
+
+    <h4>Lerakott kártyák az idővonalon:</h4>
+    <div id="timeline" class="timeline-list"></div>
 </div>
 
 <script>
     const audio = document.getElementById('audio-player');
-    const titleEl = document.getElementById('song-title');
-    const artistEl = document.getElementById('song-artist');
     const playBtn = document.getElementById('play-btn');
-    const progressBar = document.getElementById('progress-bar');
-    const timeInfo = document.getElementById('time-info');
+    const submitBtn = document.getElementById('submit-btn');
+    const yearInput = document.getElementById('year-input');
+    const resultEl = document.getElementById('result');
+    const timelineEl = document.getElementById('timeline');
 
     let songsData = [];
-    let stopTimeout = null; // A leállításhoz szükséges időzítő
+    let currentSong = null;
+    let placedCards = []; // Lerakott kártyák a meccs során
+    let stopTimeout = null;
 
-    // 1. JSON betöltése
     fetch('songs.json')
         .then(res => res.json())
-        .then(data => { songsData = data; })
-        .catch(err => console.error("JSON Hiba:", err));
+        .then(data => { songsData = data; });
 
-    // Segédfüggvény: Random szám két érték között
     function getRandomNumber(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
+    // 1. Random zenei részlet indítása (45-70mp között, 15-25mp hosszan)
     playBtn.addEventListener('click', () => {
         if (songsData.length === 0) return alert("A zenék még töltődnek!");
-
-        // Előző időzítő törlése, ha még futna
         if (stopTimeout) clearTimeout(stopTimeout);
+        resultEl.textContent = "";
 
         // Random zene kiválasztása
-        const song = songsData[getRandomNumber(0, songsData.length - 1)];
-        titleEl.textContent = song.title || "Ismeretlen szám";
-        artistEl.textContent = song.artist || "Ismeretlen előadó";
-
-        audio.src = song.src;
+        currentSong = songsData[getRandomNumber(0, songsData.length - 1)];
+        audio.src = currentSong.src;
 
         audio.onloadedmetadata = () => {
-            // 1. Random kezdőpont 45 és 70 mp (1:10) között
             const startTime = getRandomNumber(45, 70);
-            
-            // 2. Random időtartam 15 és 25 mp között
             const duration = getRandomNumber(15, 25);
-            const endTime = startTime + duration;
 
-            // Ugrás a kezdőponthoz
             audio.currentTime = startTime;
             audio.play();
 
-            // 3. Automatikus leállítás a kiválasztott időtartam után
             stopTimeout = setTimeout(() => {
                 audio.pause();
-                progressBar.style.width = '100%';
             }, duration * 1000);
-
-            // 4. Idővonal frissítése folyamatosan
-            audio.ontimeupdate = () => {
-                if (audio.currentTime >= startTime && audio.currentTime <= endTime) {
-                    const elapsed = audio.currentTime - startTime;
-                    const progressPercent = (elapsed / duration) * 100;
-                    
-                    progressBar.style.width = `${progressPercent}%`;
-                    timeInfo.textContent = `${Math.floor(elapsed)}s / ${duration}s`;
-                }
-            };
         };
     });
+
+    // 2. Tipp ellenőrzése és elhelyezése az idővonalon
+    submitBtn.addEventListener('click', () => {
+        if (!currentSong) return alert("Először indíts el egy zenét!");
+        
+        const guessedYear = parseInt(yearInput.value);
+        if (!guessedYear) return alert("Írj be egy évszámot!");
+
+        audio.pause();
+
+        // Ellenőrzés: Eltalálta a pontos évet? (Vagy ha csak a sorrendet nézzük)
+        if (guessedYear === currentSong.year) {
+            resultEl.style.color = "#1db954";
+            resultEl.textContent = `🎯 TELITALÁLAT! (${currentSong.artist} - ${currentSong.title}, ${currentSong.year})`;
+        } else {
+            resultEl.style.color = "#ff4d4d";
+            resultEl.textContent = `❌ Sajnálom! A helyes év: ${currentSong.year} (${currentSong.artist} - ${currentSong.title})`;
+        }
+
+        // Hozzáadás az idővonalhoz
+        placedCards.push({
+            year: currentSong.year,
+            title: currentSong.title,
+            artist: currentSong.artist
+        });
+
+        // Idővonal sorbarendezése évszám szerint
+        placedCards.sort((a, b) => a.year - b.year);
+
+        // Idővonal kirajzolása a képernyőre
+        renderTimeline();
+        
+        // Alaphelyzetbe állítás
+        currentSong = null;
+        yearInput.value = "";
+    });
+
+    function renderTimeline() {
+        timelineEl.innerHTML = "";
+        placedCards.forEach(card => {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'card';
+            cardDiv.innerHTML = `
+                <div class="year">${card.year}</div>
+                <div class="details">${card.artist}<br><b>${card.title}</b></div>
+            `;
+            timelineEl.appendChild(cardDiv);
+        });
+    }
 </script>
 
 </body>
