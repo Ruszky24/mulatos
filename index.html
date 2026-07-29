@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hitster Játék - Teljes Tippelés</title>
+    <title>Gyspter</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -39,8 +39,8 @@
         button:hover { background-color: #1ed760; }
         
         .game-container {
-            width: 90%;
-            max-width: 500px;
+            width: 95%;
+            max-width: 850px;
             background: #1e1e1e;
             padding: 25px;
             border-radius: 16px;
@@ -51,14 +51,12 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            margin: 20px 0;
+            margin: 20px auto;
+            max-width: 400px;
             text-align: left;
         }
-        .input-group label {
-            font-size: 14px;
-            color: #b3b3b3;
-        }
-        input[type="number"], input[type="text"] {
+        .input-group label { font-size: 14px; color: #b3b3b3; }
+        input[type="text"], select {
             padding: 10px 14px;
             font-size: 16px;
             border-radius: 8px;
@@ -67,47 +65,49 @@
             color: white;
             outline: none;
         }
-        input:focus {
-            border-color: #1db954;
-        }
+        select { cursor: pointer; }
         .timeline-list {
             display: flex;
             gap: 15px;
             justify-content: center;
             flex-wrap: wrap;
-            margin-top: 20px;
+            margin-top: 25px;
         }
         .card {
             background: #282828;
             border: 2px solid #1db954;
             padding: 15px;
             border-radius: 10px;
-            min-width: 130px;
+            min-width: 140px;
+            max-width: 160px;
             text-align: center;
         }
-        .card .year { font-size: 20px; font-weight: bold; color: #1db954; }
+        .card .year { font-size: 22px; font-weight: bold; color: #1db954; }
         .card .details { font-size: 13px; color: #ffffff; margin-top: 5px; }
         .card .artist { color: #b3b3b3; font-size: 11px; }
+        .card-number { font-size: 10px; background: #404040; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 5px; }
         .result-msg { font-weight: bold; font-size: 16px; margin-top: 15px; line-height: 1.4; }
     </style>
 </head>
 <body>
 
 <div class="player-card">
-    <h2>HITSTER JÁTÉK</h2>
-    <p>Hallgasd meg a részletet, és találd ki az adatokat!</p>
+    <h2>Gyspter JÁTÉK</h2>
+    <p>Találd ki az előadót, címet és helyezd el a kártyát az idővonalon!</p>
     
     <audio id="audio-player"></audio>
-    <button id="play-btn">🎵 Random Részlet Lejátszása</button>
+    <button id="play-btn">🎵 Új Következő Zene Lejátszása</button>
 </div>
 
 <div class="game-container">
-    <h3>Tippeld meg az adatokat!</h3>
+    <h3>Tippeld meg és helyezd el!</h3>
     
     <div class="input-group">
-        <label for="year-input">Kiadási év:</label>
-        <input type="number" id="year-input" placeholder="pl. 2021" min="1900" max="2026">
-        
+        <label for="position-select">Hova tartozik az idővonalon?</label>
+        <select id="position-select">
+            <!-- A JavaScript dinamikusan tölti fel a lehetőségeket -->
+        </select>
+
         <label for="artist-input">Előadó:</label>
         <input type="text" id="artist-input" placeholder="pl. Döndi Duó">
         
@@ -115,11 +115,11 @@
         <input type="text" id="title-input" placeholder="pl. Álmodtam egy világot magamnak">
     </div>
 
-    <button id="submit-btn" style="width: 100%;">Elhelyezés az idővonalon</button>
+    <button id="submit-btn" style="max-width: 400px; width: 100%;">Tipp Beküldése</button>
 
     <div id="result" class="result-msg"></div>
 
-    <h4>Lerakott kártyák az idővonalon:</h4>
+    <h4>Jelenlegi Idővonal:</h4>
     <div id="timeline" class="timeline-list"></div>
 </div>
 
@@ -127,8 +127,8 @@
     const audio = document.getElementById('audio-player');
     const playBtn = document.getElementById('play-btn');
     const submitBtn = document.getElementById('submit-btn');
+    const positionSelect = document.getElementById('position-select');
     
-    const yearInput = document.getElementById('year-input');
     const artistInput = document.getElementById('artist-input');
     const titleInput = document.getElementById('title-input');
     
@@ -137,14 +137,15 @@
 
     let songsData = [];
     let currentSong = null;
-    let placedCards = [];
+    let placedCards = []; // Idővonalon lévő kártyák
     let stopTimeout = null;
 
-    // JSON betöltése
+    // JSON betöltése és KEZDŐZENE beállítása
     fetch('songs.json')
         .then(res => res.json())
         .then(data => { 
             songsData = data; 
+            startNewGame();
         })
         .catch(err => console.error("JSON hiba:", err));
 
@@ -152,18 +153,66 @@
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
-    // Szövegek tisztítása az összehasonlításhoz (kisbetűsítés, szóközök levágása)
     function cleanString(str) {
         return str ? str.toString().toLowerCase().trim() : "";
     }
 
-    // 1. Random zenarészlet indítása
+    // Játék indítása: Egy random kezdőkártyát leteszünk az idővonalra
+    function startNewGame() {
+        if (songsData.length === 0) return;
+        
+        // Első zene kiválasztása kezdőkártyának
+        const startIndex = getRandomNumber(0, songsData.length - 1);
+        const starterSong = songsData[startIndex];
+
+        placedCards.push({
+            year: parseInt(starterSong.year),
+            title: starterSong.title,
+            artist: starterSong.artist
+        });
+
+        // Eltávolítjuk a választható dalok közül, hogy ne ismétlődjön
+        songsData.splice(startIndex, 1);
+
+        renderTimeline();
+        updatePositionOptions();
+    }
+
+    // Pozíció opciók frissítése (Legelére, Két kártya közé, Legvégére)
+    function updatePositionOptions() {
+        positionSelect.innerHTML = "";
+
+        // 1. Legelére
+        const firstOpt = document.createElement('option');
+        firstOpt.value = 0;
+        firstOpt.textContent = `A legelére (kisebb mint ${placedCards[0].year})`;
+        positionSelect.appendChild(firstOpt);
+
+        // 2. Kártyák közé
+        for (let i = 0; i < placedCards.length - 1; i++) {
+            const opt = document.createElement('option');
+            opt.value = i + 1;
+            opt.textContent = `${i + 1}. [${placedCards[i].year}] és ${i + 2}. [${placedCards[i + 1].year}] kártyák közé`;
+            positionSelect.appendChild(opt);
+        }
+
+        // 3. Legvégére (Ha több kártya van)
+        if (placedCards.length > 0) {
+            const lastOpt = document.createElement('option');
+            lastOpt.value = placedCards.length;
+            lastOpt.textContent = `A legvégére (nagyobb mint ${placedCards[placedCards.length - 1].year})`;
+            positionSelect.appendChild(lastOpt);
+        }
+    }
+
+    // Következő zene indítása
     playBtn.addEventListener('click', () => {
-        if (songsData.length === 0) return alert("A zenék még töltődnek!");
+        if (songsData.length === 0) return alert("Nincs több elérhető zene a JSON-ben!");
         if (stopTimeout) clearTimeout(stopTimeout);
         resultEl.textContent = "";
 
-        currentSong = songsData[getRandomNumber(0, songsData.length - 1)];
+        const randomIndex = getRandomNumber(0, songsData.length - 1);
+        currentSong = songsData[randomIndex];
         audio.src = currentSong.src;
 
         audio.onloadedmetadata = () => {
@@ -179,61 +228,83 @@
         };
     });
 
-    // 2. Tippek ellenőrzése
+    // Tipp ellenőrzése
     submitBtn.addEventListener('click', () => {
         if (!currentSong) return alert("Először indíts el egy zenét!");
-        
-        const guessedYear = parseInt(yearInput.value);
+
+        const chosenIndex = parseInt(positionSelect.value);
         const guessedArtist = cleanString(artistInput.value);
         const guessedTitle = cleanString(titleInput.value);
 
-        if (!guessedYear) return alert("Az évszámot kötelező beírni!");
-
         audio.pause();
 
-        const actualYear = parseInt(currentSong.year);
+        const songYear = parseInt(currentSong.year);
         const actualArtist = cleanString(currentSong.artist);
         const actualTitle = cleanString(currentSong.title);
 
-        const isYearCorrect = guessedYear === actualYear;
+        // Idővonal pozíció ellenőrzése
+        let isPositionCorrect = false;
+        
+        const prevCard = placedCards[chosenIndex - 1];
+        const nextCard = placedCards[chosenIndex];
+
+        const minYear = prevCard ? prevCard.year : -Infinity;
+        const maxYear = nextCard ? nextCard.year : Infinity;
+
+        if (songYear >= minYear && songYear <= maxYear) {
+            isPositionCorrect = true;
+        }
+
         const isArtistCorrect = guessedArtist === actualArtist;
         const isTitleCorrect = guessedTitle === actualTitle;
 
-        // Eredmény értékelése
-        if (isYearCorrect && isArtistCorrect && isTitleCorrect) {
-            resultEl.style.color = "#1db954";
-            resultEl.textContent = `🎯 TÖKÉLETES TELITALÁLAT! Minden adat helyes!`;
-        } else if (isYearCorrect) {
-            resultEl.style.color = "#ffb703";
-            resultEl.textContent = `Évszám eltalálva! Helyes adatok: ${currentSong.artist} - ${currentSong.title} (${actualYear})`;
-        } else {
+        // Ha ROSSZ helyre tette, ROSSZ az év pozíciója -> NEM kerül fel az idővonalra!
+        if (!isPositionCorrect) {
             resultEl.style.color = "#ff4d4d";
-            resultEl.textContent = `❌ Nem talált! Helyes adatok: ${currentSong.artist} - ${currentSong.title} (${actualYear})`;
+            resultEl.textContent = `❌ ROSSZ HELYRE TETTED! A zene (${currentSong.artist} - ${currentSong.title}) éve: ${songYear}. A kártya kiesett!`;
+        } 
+        else if (isPositionCorrect && isArtistCorrect && isTitleCorrect) {
+            resultEl.style.color = "#1db954";
+            resultEl.textContent = `🎯 TÖKÉLETES! Jó helyre tetted (${songYear}) és az adatok is helyesek!`;
+            
+            // Sikeres kártya hozzáadása az idővonalhoz
+            placedCards.splice(chosenIndex, 0, {
+                year: songYear,
+                title: currentSong.title,
+                artist: currentSong.artist
+            });
+        } 
+        else {
+            resultEl.style.color = "#ffb703";
+            resultEl.textContent = `⚠️ A helye jó volt (${songYear}), de az előadó/cím hibás! A kártya felkerült az idővonalra.`;
+            
+            placedCards.splice(chosenIndex, 0, {
+                year: songYear,
+                title: currentSong.title,
+                artist: currentSong.artist
+            });
         }
 
-        // Kártya elhelyezése az idővonalon
-        placedCards.push({
-            year: actualYear,
-            title: currentSong.title,
-            artist: currentSong.artist
-        });
+        // Felhasznált zene törlése a pakliból
+        const songIdxInDeck = songsData.indexOf(currentSong);
+        if (songIdxInDeck > -1) songsData.splice(songIdxInDeck, 1);
 
-        placedCards.sort((a, b) => a.year - b.year);
         renderTimeline();
+        updatePositionOptions();
         
-        // Mezők ürítése
+        // Alaphelyzet
         currentSong = null;
-        yearInput.value = "";
         artistInput.value = "";
         titleInput.value = "";
     });
 
     function renderTimeline() {
         timelineEl.innerHTML = "";
-        placedCards.forEach(card => {
+        placedCards.forEach((card, index) => {
             const cardDiv = document.createElement('div');
             cardDiv.className = 'card';
             cardDiv.innerHTML = `
+                <span class="card-number">#${index + 1}</span>
                 <div class="year">${card.year}</div>
                 <div class="artist">${card.artist}</div>
                 <div class="details"><b>${card.title}</b></div>
