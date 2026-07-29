@@ -1,23 +1,16 @@
 [
   {
     "id": 1,
-    "eloado": "L.L. Junior",
-    "cim": "Raggamuffin 2",
-    "ev": 2002,
-    "url": "https://www.youtube.com/watch?v=BHWfE0jgUpQ"
+    "title": "Álmodtam egy világot magamnak",
+    "artist": "Döndi Duó",
+    "src": "music/zene1.mp3",
+    "refrenStart": 45
   },
   {
     "id": 2,
-    "eloado": "Rostás Szabika",
-    "cim": "Gyere táncolj",
-    "ev": 2012,
-    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-  },
-  {
-    "id": 3,
-    "eloado": "Bittó Duó",
-    "cim": "Mulatós egyveleg",
-    "ev": 2018,
-    "url": "https://www.youtube.com/watch?v=xyz123abc"
+    "title": "Másik Zene",
+    "artist": "Másik Előadó",
+    "src": "music/zene2.mp3",
+    "refrenStart": 60
   }
 ]
